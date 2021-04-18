@@ -1,9 +1,21 @@
 # Adversarial Stylometry in the Wild: Transferable Lexical Substitution Attacks on Author Profiling
 
-Repository for the experiments described in "Adversarial Stylometry in the Wild: Transferable Lexical Substitution Attacks on Author Profiling" to be presented at EACL 2021. Code is released under the MIT license. If you use anything related to the repository or paper, please cite the following work:
+Repository for the experiments described in "[Adversarial Stylometry in the Wild: Transferable Lexical Substitution Attacks on Author Profiling](https://www.aclweb.org/anthology/2021.eacl-main.203.pdf)" to be presented at [EACL 2021](https://2021.eacl.org/). Code is released under the MIT license. If you use anything related to the repository or paper, please cite the following work:
 
 ```
-TO BE ADDED
+@inproceedings{emmery-etal-2021-adversarial,
+    title = "Adversarial Stylometry in the Wild: {T}ransferable Lexical Substitution Attacks on Author Profiling",
+    author = "Emmery, Chris  and
+      K{\'a}d{\'a}r, {\'A}kos  and
+      Chrupa{\l}a, Grzegorz",
+    booktitle = "Proceedings of the 16th Conference of the European Chapter of the Association for Computational Linguistics: Main Volume",
+    month = apr,
+    year = "2021",
+    address = "Online",
+    publisher = "Association for Computational Linguistics",
+    url = "https://www.aclweb.org/anthology/2021.eacl-main.203",
+    pages = "2388--2402"
+}
 ```
 
 > **NOTE**: documentation, and general repository information is still being updated. Feel free to check back later for a(n even more) complete version.
