@@ -20,7 +20,7 @@ Repository for the experiments described in "[Adversarial Stylometry in the Wild
 }
 ```
 
-![https://onyx.uvt.nl/sakuin/_public/reap/reap-poster.pdf](https://onyx.uvt.nl/sakuin/_public/reap/reap-poster-prev.png)
+[![EACL Poster](https://onyx.uvt.nl/sakuin/_public/reap/reap-poster-prev.png)](https://onyx.uvt.nl/sakuin/_public/reap/reap-poster.pdf)
 
 ## The Paper -- tl;dr
 
