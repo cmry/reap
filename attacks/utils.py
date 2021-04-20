@@ -3,7 +3,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 
 def pred_probs(model, text, masked=False, is_torch=False, batch_size=32):
-
+    """Routes probability prediction to either sklearn or pytorch API."""
     try:
         if type(text) == str:
             text = [text]
@@ -32,6 +32,7 @@ def pred_probs(model, text, masked=False, is_torch=False, batch_size=32):
 
 
 class ConcatenateTokens(BaseEstimator, TransformerMixin):
+    """Simple wrapper function to concatenate tokens."""
 
     def __init__(self):
         pass
@@ -47,6 +48,7 @@ class ConcatenateTokens(BaseEstimator, TransformerMixin):
 
 
 class Vocabulary(object):
+    """Vocabulary wrapper function to fit, get indices, and save."""
 
     def __init__(self):
         self.index2word = {0: '<oov>'}
@@ -54,6 +56,7 @@ class Vocabulary(object):
         self.index = 1
 
     def fit(self, inputs):
+        """Fit input texts to word2index and index2word."""
         if isinstance(inputs, str):
             if inputs not in self.word2index:
                 if inputs != '':  # NOTE: weird last-word bug
@@ -65,6 +68,7 @@ class Vocabulary(object):
         return self
 
     def transform(self, inputs):
+        """Transform inputs based on their type."""
         if isinstance(inputs, str):
             return self.word2index.get(inputs, 0)
         if isinstance(inputs, int):
@@ -73,17 +77,20 @@ class Vocabulary(object):
             return [self.transform(token) for token in inputs]
 
     def fit_transform(self, inputs):
+        """Wraps both fit and transform."""
         self.fit(inputs)
         return self.transform(inputs)
 
     def from_file(self, file_path, embeddings=False):
+        """Load vocabulary from file_path, optionally from embedding file."""
         with open(file_path, 'r') as document:
-            # FIXME: could be tokenized properly
+            # NOTE: could be tokenized properly
             for line in (x.split(' ') for x in document.read().split('\n')):
                 self.fit(line[:1] if embeddings else line)
         return self
 
     def key_sorted_values(self, to_sort='index'):
+        """Return sorted dicts by either index or word."""
         if isinstance(to_sort, str):
             to_sort = self.word2index if to_sort == 'word' else self.index2word
         return [v for k, v in sorted(to_sort.items(), key=lambda x: x[0])]

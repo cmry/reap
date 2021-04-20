@@ -13,15 +13,9 @@ from dataloader import DataLoader
 from attacks.textfooler import TextFooler
 from attacks.similarities import WordSimilarity, BERTScore
 from adversaries.baselines import WeightedRegression
-from scoring import meteor_score
+from src.scoring import meteor_score
 from sklearn.metrics import accuracy_score
 from tqdm import tqdm
-
-
-try:
-    print(open('./logo.md').read() if socket.gethostname() == 'onyx' else '')
-except Exception:
-    pass
 
 
 class Experiment(object):
@@ -63,7 +57,6 @@ class Experiment(object):
                  mode='ally', save=False):
         """Load standard experiment, otherwise manual configuration."""
 
-        # FIXME: age has to binned
         self.adversary_data = DataLoader(adversary_data, label=label).load()
         self.ally_data = DataLoader(ally_data, label=label).load() if \
             ally_data else self.adversary_data
@@ -131,11 +124,12 @@ class Experiment(object):
 
         if xid:
             writer = csv.writer(open(f'./results/graphs/{xid}.csv', 'w'))
-            # FIXME: this should be integrated
+            # NOTE: this could be more neatly integrated (as one call)
             change_list = self.changes(A_test, X_test, avg=False)
             bertsc_list = self.bertscore(A_test, X_test, avg=False)
             meteor_list = self.meteorscore(A_test, X_test, avg=False)
             writer.writerow(['changes', 'bertscore', 'meteor'])
+            # ---
             for chng, bert, met in zip(change_list, bertsc_list, meteor_list):
                 writer.writerow([chng, bert.item(), met])
 
@@ -242,10 +236,14 @@ def main():
     from attacks.heuristics import HeuristicAttack
     from attacks.similarities import BertSimilarity
     from adversaries.baselines import WeightedRegression, NGrAM
+    from dataloader import collect_paper_data
 
-    # NOTE: runs ALL experiments
+    if not Path('./data/query.csv').is_file():
+        print("Not all sources were found, let's collect those for you...")
+        collect_paper_data(password=None)  # NOTE: for pw see dataloader.py#L26
+
+    # NOTE: runs ALL experiments -- remove loops to narrow down experiments
     for a_mode in ['ally', 'adversary']:
-        # a_mode = 'ally'
         for a_set in ['mult', 'query']:
             for a_clf in ['WeightedRegression', 'NGrAM']:
                 print(f"setting: {a_mode} -- {a_set} -- {a_clf}")

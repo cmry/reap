@@ -4,8 +4,8 @@ from pathlib import Path
 from hashlib import md5
 from sklearn.exceptions import ConvergenceWarning
 with warnings.catch_warnings():
+    # NOTE: turns off INFO spam, be careful
     warnings.filterwarnings("ignore", category=ConvergenceWarning)
-
     import pickle
     import numpy as np
     from sklearn.feature_extraction.text import TfidfVectorizer
@@ -17,6 +17,18 @@ with warnings.catch_warnings():
 
 
 class Model(object):
+    """Parent model for functionality such as tune, fit, load, and save.
+
+    All models below inherit this API.
+
+    Parameters
+    ----------
+    tune: ``bool``, optional (default=False)
+        If provided, uses GridSearch (2 splits) to tune the adversary.
+
+    save: ``bool``, optional (default=True)
+        Save model (data + fit) as pickle file.
+    """ 
 
     def __init__(self, tune=False, save=True):
         self.clf = None
@@ -46,12 +58,15 @@ class Model(object):
         return clf
 
     def load_model(self):
+        """Load model from self.path."""
         self.clf = pickle.load(open(self.path, 'rb'))
 
     def save_model(self):
+        """Save model to self.path."""
         pickle.dump(self.clf, open(self.path, 'wb'))
 
     def fit(self, X, y):
+        """Fit model, generate hash, and save under that ID."""
         hash_id = md5(f"{X[0]}".encode('utf-16')).hexdigest()
         self.path = self.path.format(str(self) + '-' + hash_id)
         if self.save and Path(self.path).is_file():
@@ -67,13 +82,16 @@ class Model(object):
         return model_fit
 
     def predict(self, *args):
+        """Predict wrapper."""
         return self.clf.predict(*args)
 
     def predict_proba(self, *args):
+        """Predict proba wrapper."""
         return self.clf.predict_proba(*args)
 
 
 class WeightedRegression(Model):
+    """Standard tf*idf + LR model."""
 
     def __init__(self, tune=False, save=True):
         """Standard text classification pipeline."""
@@ -91,6 +109,7 @@ class WeightedRegression(Model):
 
 class BayesFeatures(BaseEstimator, TransformerMixin):
     """Weights (tf*idf) features with conditional class probabilites.
+
     Notes
     -----
     Adapted from https://www.kaggle.com/jhoward/.
@@ -120,6 +139,7 @@ class BayesFeatures(BaseEstimator, TransformerMixin):
 
 
 class NBSVM(Model):
+    """Implements Bayes features into LR pipeline a la NBSVM."""
 
     def __init__(self, tune=True, save=True):
         """Standard text classification pipeline."""
@@ -139,6 +159,16 @@ class NBSVM(Model):
 
 
 class NGrAM(Model):
+    """New Groninging Author-profiling Model.
+    
+    Notes
+    -----
+    [1] Angelo Basile, Gareth Dwyer, Maria Medvedeva, Josine Rawee, Hessel
+        Haagsma, and Malvina Nissim. 2018. Simply the best: minimalist system 
+        trumps complex models in author profiling. In International Conference
+        of the Cross-Language Evaluation Forum for European Languages, pages
+        143–156. Springer.
+    """
 
     def __init__(self, tune=False, save=True):
         """Standard text classification pipeline."""

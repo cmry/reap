@@ -1,8 +1,12 @@
 import re
 import csv
-import sys
+import os
 import pickle
+import sys
+import zipfile
+from collections import Counter
 from pathlib import Path
+from urllib import request, parse
 
 import spacy
 from sklearn.model_selection import train_test_split
@@ -13,46 +17,108 @@ from tqdm import tqdm
 csv.field_size_limit(sys.maxsize)
 
 
+def authenticate(base, _dir, password):
+    """Authenticate for data access."""
+    username = 'reap'
+    password = password
+
+    if not password:
+        exit("Sorry, we can't directly provide tweets for reproduction as " +
+             "per Twitter's ToS. Please contact Chris (cmry@pm.me) for the " +
+             "password to the data (academic reproduction purposes only).")
+
+    password_mgr = request.HTTPPasswordMgrWithDefaultRealm()
+    password_mgr.add_password(None, base, username, password)
+    handler = request.HTTPBasicAuthHandler(password_mgr)
+    r = request.build_opener(handler).open(base + _dir + '.zip')
+
+    if r.status == 200:
+        with open(_dir +'.zip', 'wb') as out:
+            out.write(r.read())
+    else:
+        exit("Authentication failed.")
+
+
+def collect_paper_data(password=None):
+    """Collects, unzips, and cleans resources for the experiments."""
+    base = 'https://onyx.uvt.nl/sakuin/reap/'
+    print("Collecting resources...")
+    print(''.join((l.decode('utf-8') for l in
+                     request.urlopen(base + 'README.md'))))
+    for _dir in ['src', 'data', 'results']:
+        print(f"Collecting {_dir} directory...")
+        if _dir == 'src':
+            request.urlretrieve(base + _dir + '.zip', filename=_dir + '.zip')
+        else:
+            authenticate(base, _dir, password)
+        print(f"Unzipping {_dir}...")
+        with zipfile.ZipFile(_dir + '.zip') as z:
+            z.extractall(_dir)
+        print("Cleaning up...")
+        os.remove(_dir + '.zip')
+
+
 class Preprocessor(object):
+    """Textual preprocessing and tokenization using spaCy.
+    
+    Parameters
+    ----------
+    spacy_pipe: ``str``, optional (default='en_core_web_sm')
+        Changes pipeline for spaCy (see https://spacy.io/models/en).
+    """
 
-    def __init__(self, n_jobs=20):
-        self.nlp = spacy.load("en_core_web_sm",
-                              disable=['parser', 'tagger', 'ner'])
-        self.n_jobs = n_jobs
+    def __init__(self, spacy_pipe='en_core_web_sm'):
+        self.nlp = spacy.load(spacy_pipe, disable=['parser', 'tagger', 'ner'])
 
-    def preprocess(self, text):
+    def _preprocess(self, text):
+        """Remove noisy characters and clean twitter-specific tokens."""
         new_text = []
         text = re.sub('[\n]', ' ', text)
         text = re.sub('[ ]+', ' ', text)
         tokens = [token.text.lower() for token in self.nlp(text)]
         for i, token in enumerate(tokens):
             if token == '\t' or token.startswith('http'):
-                try:
+                try:  # peek if sentence did not close correctly
                     if tokens[i - 1] in [';', '.', '?', ':', '!']:
                         token = '\t'
                     else:
                         token = '.'
                 except Exception:  # implies this is the starting token
                     token = ''
-            if token == '' or token == ' ':
+            if token == '' or token == ' ':  # skip empty tokens
                 continue
             if token.startswith('@'):
                 token = '__USER__'
-            elif re.search('#[A-Za-z0-9]+ ', token):
-                token = ' __HASHTAG__ ' + token[1:]
-            elif re.search('$[A-Za-z]+ ', token):
-                token = ' __STONKS__ ' + token[1:]
+            # NOTE: this might introduce some false positives
+            elif token == '#':
+                token = '__HASHTAG__' + token[1:]
+            elif token == '$':
+                token = '__STONKS__' + token[1:]
             new_text.append(token)
         new_text = ' '.join(new_text)
+        # NOTE: could be done a bit neater (whole function could, honestly)
         new_text = new_text.replace('. .', '.')
         new_text = new_text.replace('.  .', '.')
         return new_text
 
     def clean(self, text):
-        return list(map(self.preprocess, tqdm(text)))
+        """Map wrapper, removed multiprocessing here due to incompatibility.
+        
+        Parameters
+        ----------
+        text: ``list``, required
+            List of input texts (str).
+
+        Returns
+        -------
+        clean_text: ``list``
+            List of cleaned up text.
+        """
+        return list(map(self._preprocess, tqdm(text)))
 
 
 class Subset(object):
+    """Syntactic sugar class."""
 
     def __init__(self, data, labels):
         self.data = data
@@ -60,6 +126,7 @@ class Subset(object):
 
 
 class Data(object):
+    """Syntactic sugar class."""
 
     def __init__(self, splits):
         X_train, X_test, y_train, y_test = splits
@@ -68,6 +135,17 @@ class Data(object):
 
 
 class LabelProcessor(object):
+    """Process string labels to binary gender or age multiclass categories.
+
+    Parameters
+    ----------
+    label: ``str``, required
+        String identifier to select class parsing ('gender' or 'age').
+    
+    Notes
+    -----
+    We did not run age classifiers for the current set of experiments.
+    """
 
     def __init__(self, label):
         self.label = label
@@ -80,6 +158,18 @@ class LabelProcessor(object):
         self.age_conversion = {i: v for k, v in categories.items() for i in k}
 
     def transform(self, y):
+        """Transform string label y into integer.
+        
+        Parameters
+        ----------
+        y: ``str``, required
+            String representation of the label.
+
+        Returns
+        -------
+        _y, ``str``
+            Encoded label representation.
+        """
         if self.label == 'gender':
             y = y.lower()[:1]  # can only compare binary gender, alas
             if y == 'm' or y == 'f':
@@ -91,44 +181,41 @@ class LabelProcessor(object):
 
 
 class DataLoader(object):
+    """CSV data loader that batches text based on user ID.
 
-    def __init__(self, set_name=None, label='gender', save=True):
+    Parameters
+    ----------
+    set_name: ``str``, optional (default=None)
+        Name for a pre-made dataset to be loaded. If nothing provided, data
+        is assumed to be new and provided by the user.
+    delim: ``str``, optional (default=',')
+        Delimiter for .csv file that holds the data. CSV assumed to contain
+        the following columns: [label, text, user ID].
+    label: ``str``, optional (default='gender')
+        String representation of the label to be encoded by the
+        LabelPreprocessor. Encoding for 'age' and 'gender' is implemented.
+    data_dir: ``str``, optional (default='./data')
+        Directory where the data can be found, and the pickle files will be
+        saved.
+    save: ``bool``, optional (default=True)
+        If data should be saved as a pickle for faster loading.
+    """
+
+    def __init__(self, set_name=None, delim=',', label='gender',
+                 data_dir='./data', save=True):
         self.set_name = set_name
+        self.delim = delim
         self.label = label
-        self.data_dir = './data'
+        self.data_dir = data_dir
         self.save = save
 
     def __str__(self):
+        """String representation for printing set names."""
         return str(self.set_name)
 
-    def corpus_stats(self):
-        from collections import Counter
-
-        y, tweets, users, tokens, types = Counter(), 0, set(), 0, Counter()
-        csvf, ix = self.get_data_info()
-
-        for i, row in enumerate(csvf):
-            label, text, uid = tuple(map(lambda j: row[j], ix))
-            if label == 'x':
-                continue
-            tweets += 1
-            y[label] += 1
-            users.add(uid)
-            tok = text.split(' ')
-            tokens += len(tok)
-            for t in tok:
-                types[t] += 1
-
-        X_train, X_test, y_train, y_test = self.load()
-
-        print("Corpus stats\n-----------\n" +
-              f"labels: {y}\ntweets: {tweets}\nusers: {len(users)}\n" +
-              # NOTE: report actual test set numbers instead of aprox
-              f"train: {len(X_train)}\ntest: {(len(X_train)/80)*20}\n" + 
-              f"tokens: {tokens}\ntypes: {len(types)}\n")
-
-    def batch_user_tweets(self, user_tweets, batch_len=20):
-        for user, data in user_tweets.items():
+    def _batch_user_tweets(self, user_tweets, batch_len=20):
+        """Split list of tweets into batches of batch_len."""
+        for data in user_tweets:
             label, tweets = data
             tweet_batch = []
             for i, tweet in enumerate(tweets):
@@ -136,9 +223,9 @@ class DataLoader(object):
                 if i and not i % batch_len:
                     yield label, '\t'.join(tweet_batch)
                     tweet_batch = []
-            yield label, '\t'.join(tweet_batch)  # leftover
+            yield label, '\t'.join(tweet_batch)  # join leftover instances
 
-    def prep_data_batches(self, data, max_len=200):
+    def _prep_data(self, data, max_len=200):
         """Clean the provided data and cut up to max_len."""
         D_train, D_test, proc, lenc = *data, Preprocessor(), LabelEncoder()
 
@@ -151,10 +238,11 @@ class DataLoader(object):
 
         return X_train, X_test, y_train, y_test
 
-    def iter_csv(self, csvf, ix, encoder):
+    def _iter_csv(self, csvf, header_indices, encoder):
+        """Loop through csv, encode labels, group per user, and batch."""
         user_tweets = {}
         for row in csvf:
-            label, text, uid = tuple(map(lambda i: row[i], ix))
+            label, text, uid = tuple(map(lambda i: row[i], header_indices))
             try:
                 label = encoder.transform(label)
                 if not label:
@@ -169,41 +257,46 @@ class DataLoader(object):
             else:
                 user_tweets[uid][1].append(text)
 
-        for y, batch in self.batch_user_tweets(user_tweets):
+        for y, batch in self._batch_user_tweets(user_tweets.values()):
             yield y, batch
 
-    def get_file_info(self):
-        fn, delim = None, None
+    def _get_file_info(self):
+        """Return file directory and delimiter by set identifier."""
+        file_name, delim = None, None
         if self.set_name == 'volk':
-            fn, delim = 'volkova.csv', ','
+            file_name, delim = 'volkova.csv', ','
         elif self.set_name == 'mult':
-            fn, delim = 'corpus.tsv', '\t'
+            file_name, delim = 'corpus.tsv', '\t'
         elif self.set_name == 'query':
-            fn, delim = 'query.csv', ','
+            file_name, delim = 'query.csv', ','
         elif self.set_name == 'sklearn':
-            fn = 'sklearn.example'
+            file_name = 'sklearn.example'
+        else:
+            file_name, delim = self.set_name, self.delim
+        return file_name, delim
 
-        return fn, delim
-
-    def get_data_info(self):
-        fn, delim = self.get_file_info()
+    def _get_data_info(self):
+        """Get data and header indices from csv directory."""
+        fn, delim = self._get_file_info()
         csvf = csv.reader(open(f'{self.data_dir}/{fn}'), delimiter=delim)
         header = csvf.__next__()
         ix = list(map(lambda x: header.index(x), [self.label, 'text', 'uid']))
         return csvf, ix
 
-    def load_own_set(self):
+    def _load_data(self):
+        """Load provided data based on info given in init."""
         lab_proc = LabelProcessor(self.label)
-        csvf, ix = self.get_data_info()
-        return self.iter_csv(csvf, ix, lab_proc)
+        csvf, ix = self._get_data_info()
+        return self._iter_csv(csvf, ix, lab_proc)
 
-    def load_splits(self):
-        y, X = zip(*self.load_own_set())  # NOTE: don't shuffle profiles!
+    def _load_data_splits(self):
+        """Wrapper to load both train and test splits."""
+        y, X = zip(*self._load_data())  # NOTE: don't shuffle profiles!
         data = Data(train_test_split(X, y, test_size=0.2,  # stratify=y,
                                      shuffle=False, random_state=42))
         return data.train, data.test
 
-    def load_sklearn_data(self):
+    def _load_sklearn_data(self):
         """Load binary 20newsgroups data from sklearn."""
         categories = ['sci.crypt', 'sci.space']
         D_train = fetch_20newsgroups(subset='train', categories=categories,
@@ -215,8 +308,14 @@ class DataLoader(object):
         return D_train, D_test
 
     def load(self):
-        """Wrap own set_name provided data in data classes"""
-        save, fn, _, label = False, *self.get_file_info(), self.label
+        """Load set_name provided data in class init and pickle save.
+        
+        Returns
+        -------
+        tweet_batches: ``list``
+            List of strings containing batched tweets seperated by a \t.
+        """
+        save, fn, _, label = False, *self._get_file_info(), self.label
         pickle_dir = f'{self.data_dir}/{fn.split(".")[0] + label + ".pickle"}'
 
         if self.save:
@@ -226,12 +325,47 @@ class DataLoader(object):
                 save = True
 
         if self.set_name == 'sklearn':
-            data = self.load_sklearn_data()
+            data = self._load_sklearn_data()
         else:
-            data = self.load_splits()
+            data = self._load_data_splits()
 
-        batches = self.prep_data_batches(data)
+        tweet_batches = self._prep_data(data)
         if save:
-            pickle.dump(batches, open(pickle_dir, 'wb'))
+            pickle.dump(tweet_batches, open(pickle_dir, 'wb'))
 
-        return batches
+        return tweet_batches
+
+    def corpus_stats(self):
+        """Print label, tweet, user, token, and type frequencies for set_name.
+        
+        Returns
+        -------
+        corpus_info: ``str``
+            String representation of all the corpus descriptives.
+
+        Notes
+        -----
+        Might wanna run this first time loading data--in all honesty, but hey.
+        """
+        y, tweets, users, n_tokens, types = Counter(), 0, set(), 0, Counter()
+        data_file, header_indices = self._get_data_info()
+
+        for row in data_file:
+            label, text, uid = tuple(map(lambda j: row[j], header_indices))
+            if label == 'x':
+                continue
+            tweets += 1
+            y[label] += 1
+            users.add(uid)
+            for token in text.split(' '):
+                n_tokens += 1
+                types[token] += 1
+
+        X_train, _, _, _ = self.load()
+        corpus_info = (
+            "Corpus stats\n-----------\n" +
+            f"labels: {y}\ntweets: {tweets}\nusers: {len(users)}\n" +
+            # NOTE: approximates test set numbers
+            f"train: {len(X_train)}\ntest: {(len(X_train)/80)*20}\n" + 
+            f"tokens: {n_tokens}\ntypes: {len(types)}\n")
+        return corpus_info

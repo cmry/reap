@@ -4,11 +4,13 @@ Repository for the experiments described in "[Adversarial Stylometry in the Wild
 
 ```
 @inproceedings{emmery-etal-2021-adversarial,
-    title = "Adversarial Stylometry in the Wild: {T}ransferable Lexical Substitution Attacks on Author Profiling",
+    title = "Adversarial Stylometry in the Wild: 
+      {T}ransferable Lexical Substitution Attacks on Author Profiling",
     author = "Emmery, Chris  and
       K{\'a}d{\'a}r, {\'A}kos  and
       Chrupa{\l}a, Grzegorz",
-    booktitle = "Proceedings of the 16th Conference of the European Chapter of the Association for Computational Linguistics: Main Volume",
+    booktitle = "Proceedings of the 16th Conference of the European Chapter
+      of the Association for Computational Linguistics: Main Volume",
     month = apr,
     year = "2021",
     address = "Online",

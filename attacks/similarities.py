@@ -113,10 +113,6 @@ class USESimilarity(object):
 class BERTScore(object):
     """Calculates sentence similarity based on BERTScore [2].
 
-    Parameters
-    ----------
-    None
-
     Notes
     -----
     This scoring is used in the evaluation, discussed in Section 4.5 (Metrics).
@@ -159,9 +155,7 @@ class BERTScore(object):
 
 
 class POSSimilarity(object):
-    """Part-of-Speech accuracy ('similarity') masking.
-
-    """
+    """Part-of-Speech accuracy ('similarity') masking."""
 
     def __init__(self):
         """Do nothing."""
@@ -416,8 +410,8 @@ class WordSimilarity(object):
         IAAI2020, The Tenth AAAI Symposium on Educational Advances in
         Artificial Intelligence, EAAI2020, New York, NY, USA, February 7-12,
         2020, pages 8018–8025. AAAI Press.
-    [5] Nikola  Mrkˇsi ́c, Diarmuid ́O  S ́eaghdha,  Blaise Thomson, Milica
-        Gasic, Lina M Rojas Bara-hona, Pei-Hao Su, David Vandyke, Tsung-Hsien
+    [5] Nikola  Mrkšić, Diarmuid ́O Séaghdha,  Blaise Thomson, Milica
+        Gašic, Lina M Rojas Bara-hona, Pei-Hao Su, David Vandyke, Tsung-Hsien
         Wen, and Steve Young. 2016. Counter-fitting word vectors to linguistic
         onstraints. In Proceedings of the 2016 Conference of the North
         American Chapter of the Association for Computational Linguistics:
@@ -438,7 +432,7 @@ class WordSimilarity(object):
         """String representation of class for printing."""
         return self.__class__.__name__
 
-    def fit_embeddings_to_vocab(self, embedding_file):
+    def _fit_embeddings_to_vocab(self, embedding_file):
         """Extract relevant embeddings for vocabulary."""
         embeddings = {}
         for line in (x.split(' ') for x in open(embedding_file).read(

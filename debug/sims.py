@@ -14,8 +14,8 @@ def test_load_voc():
 
 def test_if_fit_works():
     voc = Vocabulary()
-    voc.fit("crap")
-    x = voc.transform("crap")
+    voc.fit("test")
+    x = voc.transform("test")
     assert isinstance(x, int)
 
 
@@ -89,7 +89,7 @@ def test_token_similarity():
     print(ws.propose_perturbations(['father', 'mother', 'giraffe']))
 
     sim1 = ws.token_similarity('father', 'mother')
-    sim2 = ws.token_similarity('father', 'crap')
+    sim2 = ws.token_similarity('father', 'stuff')
 
     assert sim1 < sim2
 
@@ -149,15 +149,3 @@ def test_bert_stuff():
                                 dropout=0.5)))
     print(' '.join(replace_sent(bs, cp(tokens), cp(perturb), method='dropout',
                                 dropout=0.9)))
-
-
-# def test_join_similarity():
-#     print()
-#     bs = BertSimilarity()
-#     ws = WordSimilarity('./fitted-embeddings.txt')
-
-#     tokens = "i like to cut my beard and drink beer .".split()
-#     wsyms = ws.find_synonyms(tokens)
-#     bsyms = bs.find_synonyms(tokens, tokens)
-#     print(wsyms)
-#     print(bsyms)
