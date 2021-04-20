@@ -20,14 +20,41 @@ Repository for the experiments described in "[Adversarial Stylometry in the Wild
 }
 ```
 
-> **NOTE**: documentation, and general repository information is still being updated. Feel free to check back later for a(n even more) complete version.
+![https://onyx.uvt.nl/sakuin/_public/reap/reap-poster.pdf](https://onyx.uvt.nl/sakuin/_public/reap/reap-poster-prev.png)
+
+## The Paper -- tl;dr
+
+We: 
+
+- ⚔️ Successfully attacked gender classifiers using transformer-based adversarial lexical substitution.
+- 🥪 Propose several extensions to [TextFooler](https://github.com/jind11/TextFooler) to propose and rank substitute candidates.
+- 🔄 Showed simple substitution models’ attack performances transfer across domains and state-of-the-art models.
+- 🚀 Realistic in the wild attack can be collected and fitted locally & fast on a distantly collected corpus.
 
 
-## Setup
+## Reproduction
 
-To reproduce the experiments, collect the required data first, and simply run `experiment.py`. All output can be found under `results` (**to be added**) including the human evaluation and annotation instructions. Instructions to obtain the data can currently be found in `data/README.md` (**bash script will follow**), and for downloading the embeddings in `src/README.md`.
+Simply run `experiment.py`. That's it; the `__main__` boilerplate has all required code. There's a caveat though (unfortunately): we can't share Twitter data directly. Please contact @cmry if you would like access to the data for reproduction. After, simply insert the password in [this line of code](https://github.com/cmry/reap/blob/main/experiment.py#L243) and everything should\* run.
 
+> \* The code was tested with Python 3.7 on Ubuntu. If anything does not work, please submit an issue.
 
 ## Experiment Details
 
 We used a single NVIDIA TITAN X (Pascal) to run the BERT-based models. Loading the data takes approximately half an hour. The normal attacks run in several minutes, the BERT-based models take roughly 2 hours to run on 200 samples given the parameters that we used. This is mainly due to similarity score (which in the current codebase has a non-optimal implementation). With this turned off it runs in less than an hour. For TextFooler, roughly 30G of RAM is required to store the embeddings in memory.
+
+## Dependencies
+
+The code was tested using these libraries and versions:
+
+```
+bert_score      0.3.6
+nltk            3.5
+numpy           1.18.4
+spacy           2.2.3
+scikit-learn    0.23.1       
+tensorflow      1.14.0
+tensorflow_hub  0.7.0
+torch           1.5.0
+tqdm            4.46.0
+transformers    3.5.1
+```
