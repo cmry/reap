@@ -178,6 +178,8 @@ class LabelProcessor(object):
             if y == 'x':
                 return
             return self.age_conversion.get(int(float(y)), 0)
+        else:
+            return y
 
 
 class DataLoader(object):
