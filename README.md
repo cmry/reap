@@ -18,17 +18,17 @@ Repository for the experiments described in "[Adversarial Stylometry in the Wild
 
 ## 📜 Overview
 
-- [🔎 Paper Details](https://github.com/cmry/reap#paper-details)
-    - [🙄 tl;dr](https://github.com/cmry/reap#tldr)
-    - [♻️ Reproduction](https://github.com/cmry/reap#reproduction)
-    - [🚀 Dependencies](https://github.com/cmry/reap#dependencies)
-    - [🛢️ Resources](https://github.com/cmry/reap#resources)
-- [🛠️ Configuration](https://github.com/cmry/reap#configuration)
-- [🔗 Extensions](https://github.com/cmry/reap#extensions)
-    - [💾 Adding Data](https://github.com/cmry/reap#adding-data)
-    - [⚔️ Adding Attacks](https://github.com/cmry/reap#adding-attacks)
-    - [🥪 Adding Classifiers](https://github.com/cmry/reap#adding-classifiers)
-    - [🔄 Lexical Substitution](https://github.com/cmry/reap#lexical-substitution)
+- [🔎 Paper Details](https://github.com/cmry/reap#-paper-details)
+    - [🙄 tl;dr](https://github.com/cmry/reap#-tldr)
+    - [♻️ Reproduction](https://github.com/cmry/reap#%EF%B8%8F-reproduction)
+    - [🚀 Dependencies](https://github.com/cmry/reap#-dependencies)
+    - [🛢️ Resources](https://github.com/cmry/reap#%EF%B8%8F-resources)
+- [🛠️ Configuration](https://github.com/cmry/reap#%EF%B8%8F-configuration)
+- [🔗 Extensions](https://github.com/cmry/reap#-extensionss)
+    - [💾 Adding Data](https://github.com/cmry/reap#-adding-data)
+    - [⚔️ Adding Attacks](https://github.com/cmry/reap#%EF%B8%8F-adding-attacks)
+    - [🥪 Adding Classifiers](https://github.com/cmry/reap#-adding-classifiers)
+    - [🔄 Lexical Substitution](https://github.com/cmry/reap#-lexical-substitution)
 
 
 ## 🔎 Paper Details
